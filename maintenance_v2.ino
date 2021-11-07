@@ -40,9 +40,9 @@
 #define LED_PIN           D5
 #define BUZZ_PIN          D6
 
-const String SERVICE_TYPE = "1";
-const String SERVICE_NAME = "ELECTRICITY CIRCUIT";
-const String SERVICE_MAINTENANCE_PASSWORD = "yqj6b6k9";
+const String SERVICE_TYPE = "2";
+const String SERVICE_NAME = "AIR CIRCUIT";
+char SERVICE_MAINTENANCE_PASSWORD[] = "8xfxa52k";
 
 /* 
  1 = ELECTRICITY CIRCUIT - yqj6b6k9
