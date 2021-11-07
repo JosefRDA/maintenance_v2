@@ -27,8 +27,15 @@
 #include <ESP8266HTTPClient.h>
 
 
+#define FADES_DELAY 2
+#define FADES_TIMES 1
+#define SPEED_BLINK_DELAY 100
+#define SPEED_BLINK_SHORT_TIMES 2
+#define SPEED_BLINK_LONG_TIMES 20
+
 // The WS2812B RGB Shield pin
 #define LED_PIN           D5
+#define BUZZ_PIN          D6
 
 const String SERVICE_TYPE = "1";
 
@@ -91,6 +98,7 @@ HTTPClient http; //Declare an object of class HTTPClient
 // the setup function runs once when you press reset or power the board
 void setup() {
   neoPixelSetup();
+  buzzerSetup();
   wifiSetup();
   serialConnexionLoopSetup();
 }
@@ -108,6 +116,9 @@ void wifiSetup() {
   WiFi.begin(Wifi_SSID, Wifi_PWD);
 }
 
+void buzzerSetup() {
+  pinMode(BUZZ_PIN, OUTPUT); // Set buzzer - pin 9 as an output
+}
 
 // the loop function runs over and over again forever
 void loop() {
@@ -115,11 +126,52 @@ void loop() {
 
   StatusCheck();    // Connect the first time then check status every x millis
 
-  
-  //serialConnexionLoop();
+  ChangeLedStatus(ServiceStatus);
+  serialConnexionLoop();
   
   delay(MAIN_FREQUENCY); 
   FirstLoop = false; 
+}
+
+void ChangeLedStatus(String ServiceStatus) {
+  if (ServiceStatus != "") {
+    //Traite le message reçu et change le statut des leds.
+    switch (ServiceStatus[0] - '0') { // conversion en INT
+      case 1:
+        //Problème mineur
+        // 
+        // PCF_01.write(dLED1, HIGH); // WITH PCF8574 invert led level
+        //digitalWrite(LED3, LOW);          
+        tone(BUZZ_PIN, 3000); // Send 1KHz sound signal...
+        //PLUSE YELLOW // PulseLed(LED2,30);
+        fade(FADES_DELAY, FADES_TIMES, 255, 255, 0);
+        noTone(BUZZ_PIN);     // Stop sound...
+        fade(FADES_DELAY, FADES_TIMES, 255, 255, 0);
+        tone(BUZZ_PIN, 3000); // Send 1KHz sound signal...
+        //PLUSE YELLOW // PulseLed(LED2,30);
+        fade(FADES_DELAY, FADES_TIMES, 255, 255, 0);
+        noTone(BUZZ_PIN);     // Stop sound...
+        fade(FADES_DELAY, FADES_TIMES, 255, 255, 0);
+        break;
+      case 2:
+        //Problème majeur
+        //digitalWrite(LED2, LOW);
+        //digitalWrite(LED3, LOW);          
+        tone(BUZZ_PIN, 2000); // Send sound signal...
+        //BlinkLed(dLED1,30,1, false);
+        BlinkLed(pixels.Color(255, 0, 0),SPEED_BLINK_DELAY,SPEED_BLINK_LONG_TIMES);
+        break;
+      default:
+        // Tout va bien
+        noTone(BUZZ_PIN);     // Stop sound...
+        //VERT CONSTANT // digitalWrite(LED3, HIGH);   
+        pixels.setPixelColor(0, pixels.Color(0, 255, 0));
+        pixels.show();   
+        //PCF_01.write(dLED1, HIGH); // WITH PCF8574 invert led level
+        //digitalWrite(LED2, LOW);
+        break;   
+      } 
+  }
 }
 
 void StatusCheck() {
@@ -141,21 +193,17 @@ void StatusCheck() {
 }
 
 void OnlineCheck() {
-  Serial.println("DEBUG OnlineCheck");
   http.begin("http://www.clones.be/console/_backend/iot/Get_service_type_status.asp?ServiceType="+SERVICE_TYPE);    //Specify request destination
   // TODO : Set up the  SERVICE-TYPE by some physical switches on the board
   int httpCode = http.GET();    //Send the request
-  BlinkLed(pixels.Color(0, 0, 255),100,10); //BLUE  // Delay of 900 millis to give the time to receive the data
-    
+  BlinkLed(pixels.Color(0, 0, 255),SPEED_BLINK_DELAY,SPEED_BLINK_SHORT_TIMES); //BLUE  // Delay of 900 millis to give the time to receive the data
+  
   if (httpCode > 0) {   //Check the returning code
-    Serial.println("DEBUG httpCode :" + String(httpCode));
     pixels.setPixelColor(0, pixels.Color(0, 0, 255));
     pixels.show();//BLUE // We have the status  
-    ServiceStatus = http.getString();   //Get the request response ServiceStatus (just an integer)
-    Serial.println("Status : " + ServiceStatus);    //Print the response payload
-    
+    //ServiceStatus = http.getString();   //Get the request response ServiceStatus (just an integer)
+    ServiceStatus = "0";
     http.end();   //Close connection
-    Serial.println("Connection closed.");    
   }
 
 }
@@ -168,6 +216,22 @@ void BlinkLed (uint32_t color, int Blinkspeed, int BlinkTimes)  {
     pixels.setPixelColor(0, pixels.Color(0, 0, 0));
     pixels.show();
     delay(Blinkspeed/2);
+  }
+}
+
+void fade(uint8_t wait, uint8_t times, uint8_t pRed, uint8_t pGreen, uint8_t pBlue) {
+  for(uint8_t cpt = 0; cpt < times; cpt++) {
+    for(int j = 0; j < 256 ; j++){
+          pixels.setPixelColor(0, pixels.Color(pRed * j / 255, pGreen  * j / 255, pBlue  * j / 255) );
+          delay(wait);
+          pixels.show();
+        }
+    
+    for(int j = 255; j >= 0 ; j--){
+          pixels.setPixelColor(0, pixels.Color(pRed * j / 255, pGreen * j / 255, pBlue * j / 255) );
+          delay(wait);
+          pixels.show();
+        }
   }
 }
 
