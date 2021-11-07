@@ -33,22 +33,27 @@
 #define SPEED_BLINK_SHORT_TIMES 2
 #define SPEED_BLINK_LONG_TIMES 20
 
+#define ANALYSIS_DELAY_MIN 10
+#define ANALYSIS_DELAY_MAX 60
+
 // The WS2812B RGB Shield pin
 #define LED_PIN           D5
 #define BUZZ_PIN          D6
 
 const String SERVICE_TYPE = "1";
+const String SERVICE_NAME = "ELECTRICITY CIRCUIT";
+const String SERVICE_MAINTENANCE_PASSWORD = "yqj6b6k9";
 
 /* 
- 1 = Electricity circuit
- 2 = Air circuit
- 3 = Water circuit
- 4 = Solar Energy
- 5 = Biomass Energy
- 6 = Geotyhermal Energy
- 7 = Secure system : Archotype
- 8 = Defense system : Nano detection
- 9 = Defense system : Kalash
+ 1 = ELECTRICITY CIRCUIT - yqj6b6k9
+ 2 = AIR CIRCUIT - 8xfxa52k
+ 3 = WATER CIRCUIT - 4mvj3yxr
+ 4 = SOLAR ENERGY - 6swurr4n
+ 5 = BIOMASS ENERGY - 8pz3j2s8
+ 6 = GEOTYHERMAL ENERGY - bn6h52r2
+ 7 = SECURE SYSTEM : ARCHOTYPE - 42hm56e6
+ 8 = DEFENSE SYSTEM : NANO DETECTION - gj9nzjat
+ 9 = DEFENSE SYSTEM : KALASH - 5n8cjr3m
 */
 
 const int MAIN_FREQUENCY = 100; // in milliseconds
@@ -87,10 +92,13 @@ boolean baneerHasBeenShown = false;
 
 int StatusTime = 0;
 String ServiceStatus = "";
+String outageResolutionCode = "";
 bool FirstLoop = true;
 
 unsigned long currentMillis = 0;    // stores the value of millis() in each iteration of loop()
 unsigned long previousStatusCheck_Millis = 0; // will store last time the Console status was checked
+
+int menuStep = 0;
 
 HTTPClient http; //Declare an object of class HTTPClient   
 
@@ -201,8 +209,7 @@ void OnlineCheck() {
   if (httpCode > 0) {   //Check the returning code
     pixels.setPixelColor(0, pixels.Color(0, 0, 255));
     pixels.show();//BLUE // We have the status  
-    //ServiceStatus = http.getString();   //Get the request response ServiceStatus (just an integer)
-    ServiceStatus = "0";
+    ServiceStatus = http.getString();   //Get the request response ServiceStatus (just an integer)
     http.end();   //Close connection
   }
 
@@ -281,10 +288,94 @@ void recvWithEndMarker() {
 
 void showNewData() {
     if (newData == true) {
-        Serial.println("This just in ... ");
-        Serial.println(receivedChars);
+      switch (menuStep) {
+          case 1 :
+            Serial.println("********");
+            if(strcmp(receivedChars,SERVICE_MAINTENANCE_PASSWORD)==0) {
+              Serial.println("ACCES AUTORISE");
+              delay(1000);
+              if (ServiceStatus != "") {
+              switch (ServiceStatus[0] - '0') { // conversion en INT
+                case 1:
+                  //Problème mineur
+                  Serial.println("APPUYER SUR ENTRER POUR OBTENIR LE CODE DE RESOLUTION DE L'INCIDENT EN COURS");
+                  menuStep = 3;
+                  break;
+                case 2:
+                  //Problème majeur
+                  Serial.println("APPUYER SUR ENTRER POUR OBTENIR LE CODE DE RESOLUTION DE L'INCIDENT CRITIQUE EN COURS");
+                  menuStep = 3;
+                  break;
+                default:
+                  // Tout va bien
+                  Serial.println("AUCUNE ACTION DE MAINTENANCE A EFFECTUER");
+                  Serial.println("DECONNEXION AU SYSTEME ...");
+                  menuStep = 0;
+                  break;   
+                } 
+              }
+            } else {
+              Serial.println("MOT DE PASSE INCORRECT");
+              Serial.print(">");
+            }
+            break; 
+          case 2 :
+              
+            break; 
+          case 3 :
+            menuStepThree();
+           break; 
+          default:
+            Serial.println("DNG-72 > SIGMA-7 > SYSTEMES DE MAINTENANCE > " + SERVICE_NAME);
+            
+            if (ServiceStatus != "") {
+              switch (ServiceStatus[0] - '0') { // conversion en INT
+                case 1:
+                  //Problème mineur
+                  Serial.println("STATUS : [INCIDENT EN COURS]");
+                  break;
+                case 2:
+                  //Problème majeur
+                  Serial.println("STATUS : [INCIDENT CRITIQUE EN COURS]");
+                  break;
+                default:
+                  // Tout va bien
+                  Serial.println("STATUS : [100% OPERATIONEL]");
+                  break;   
+                } 
+            }
+            Serial.println("VEUILLEZ ENTRER LE MOT DE PASSE DE MAINTENANCE DU MODULE :");
+            Serial.print(">");
+            menuStep = 1;
+            break;
+        }
         newData = false;
     }
+}
+
+void menuStepThree() {
+  long randNumber = random(ANALYSIS_DELAY_MIN, ANALYSIS_DELAY_MAX);
+
+  for (long cpt = 0 ; cpt < randNumber; cpt++) {
+    long percent = cpt * 100 / randNumber;
+    Serial.println("ANALYSE EN COURS : " + String(percent) + "% ...");
+    delay(1000);
+  }
+  Serial.println("ANALYSE TERMINEE");
+  
+  
+  http.begin("http://www.clones.be/console/_backend/iot/Get_service_type_error.asp?ServiceType="+SERVICE_TYPE);    //Specify request destination
+  // TODO : Set up the  SERVICE-TYPE by some physical switches on the board
+  int httpCode = http.GET();    //Send the request
+  
+  if (httpCode > 0) {   //Check the returning code
+    outageResolutionCode = http.getString();   //Get the request response ServiceStatus (just an integer)
+    //outageResolutionCode = "0";
+    http.end();   //Close connection
+
+    Serial.println("CODE DE RESOLUTION : " + outageResolutionCode);
+    
+  }
 }
 
 void printBaneer() {
@@ -303,7 +394,5 @@ void printBaneer() {
   Serial.println("                  ((((((((          ((((((((((         ((((((((                 ");
   Serial.println("                       ,/           (((((((((            /                      ");
   Serial.println("                                     ((((((((                                   ");
-  Serial.println("");
-  Serial.println("DNG-72 > SIGMA-7 > POWER SUPPLY ADMINISTRATION ");
   Serial.println("");
 }
