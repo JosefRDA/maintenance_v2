@@ -40,9 +40,9 @@
 #define LED_PIN           D5
 #define BUZZ_PIN          D6
 
-const String SERVICE_TYPE = "2";
-const String SERVICE_NAME = "AIR CIRCUIT";
-char SERVICE_MAINTENANCE_PASSWORD[] = "8xfxa52k";
+const String SERVICE_TYPE = "9";
+const String SERVICE_NAME = "DEFENSE SYSTEM : KALASH";
+char SERVICE_MAINTENANCE_PASSWORD[] = "5n8cjr3m";
 
 /* 
  1 = ELECTRICITY CIRCUIT - yqj6b6k9
@@ -379,6 +379,9 @@ void menuStepThree() {
 }
 
 void printBaneer() {
+  tone(BUZZ_PIN, 3000); // Send 1KHz sound signal...
+  delay(250);
+  noTone(BUZZ_PIN);     // Stop sound...
   Serial.println("");
   Serial.println("████████ ███████  ██████ ██   ██ ███    ██  ██████   ██████  ██████  ██████  ██████  ");
   Serial.println("   ██    ██      ██      ██   ██ ████   ██ ██    ██ ██      ██    ██ ██   ██ ██   ██ ");
