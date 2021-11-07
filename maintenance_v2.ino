@@ -23,14 +23,27 @@
 */
 
 int cpt;
+bool serialActive;
+
+const byte numChars = 32;
+char receivedChars[numChars];   // an array to store the received data
+
+boolean newData = false;
+boolean baneerHasBeenShown = false;
 
 // the setup function runs once when you press reset or power the board
 void setup() {
   // initialize digital pin LED_BUILTIN as an output.
   pinMode(LED_BUILTIN, OUTPUT);
-  Serial.begin(9600);
   cpt = 0;
+  serialConnexionLoopSetup();
 }
+
+void serialConnexionLoopSetup() {
+  Serial.begin(9600);
+  serialActive = false;
+}
+
 
 // the loop function runs over and over again forever
 void loop() {
@@ -39,11 +52,63 @@ void loop() {
   digitalWrite(LED_BUILTIN, LOW);    // turn the LED off by making the voltage LOW
   delay(1000); // wait for a second
   cpt ++;
-  printBaneer();
-  Serial.println("Cpt : " + String(cpt));
+  serialConnexionLoop();
+}
+
+void serialConnexionLoop() {
+  if (Serial.available()) { //Activate by keyboard
+    if(serialActive) {
+      recvWithEndMarker();
+      showNewData();
+    } else {
+      //first frame of a new connexion
+      if(!baneerHasBeenShown) {
+        printBaneer();
+        baneerHasBeenShown = true;
+      }
+      serialActive = true;
+    }
+  } else {
+    serialActive = false;  
+  }
+}
+
+
+void recvWithEndMarker() {
+    static byte ndx = 0;
+    char endMarker = '\r';
+    char rc;
+
+    while (Serial.available() > 0 && newData == false) {
+      
+        rc = Serial.read();
+
+        if (rc != endMarker) {
+            receivedChars[ndx] = rc;
+            ndx++;
+            if (ndx >= numChars) {
+                ndx = numChars - 1;
+            }
+        }
+        else {
+            receivedChars[ndx] = '\0'; // terminate the string
+            ndx = 0;
+            newData = true;
+        }
+        delay(100);
+    }
+}
+
+void showNewData() {
+    if (newData == true) {
+        Serial.println("This just in ... ");
+        Serial.println(receivedChars);
+        newData = false;
+    }
 }
 
 void printBaneer() {
+  Serial.println("");
   Serial.println("████████ ███████  ██████ ██   ██ ███    ██  ██████   ██████  ██████  ██████  ██████  ");
   Serial.println("   ██    ██      ██      ██   ██ ████   ██ ██    ██ ██      ██    ██ ██   ██ ██   ██ ");
   Serial.println("   ██    █████   ██      ███████ ██ ██  ██ ██    ██ ██      ██    ██ ██████  ██████  ");
@@ -59,5 +124,6 @@ void printBaneer() {
   Serial.println("                       ,/           (((((((((            /                      ");
   Serial.println("                                     ((((((((                                   ");
   Serial.println("");
-  Serial.println("Modules de maintenance version 2.01");
+  Serial.println("DNG-72 > SIGMA-7 > POWER SUPPLY ADMINISTRATION ");
+  Serial.println("");
 }
