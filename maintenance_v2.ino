@@ -23,10 +23,31 @@
 */
 
 #include <Adafruit_NeoPixel.h>
+#include <ESP8266WiFi.h>
+#include <ESP8266HTTPClient.h>
 
 
 // The WS2812B RGB Shield pin
 #define LED_PIN           D5
+
+const String SERVICE_TYPE = "1";
+
+/* 
+ 1 = Electricity circuit
+ 2 = Air circuit
+ 3 = Water circuit
+ 4 = Solar Energy
+ 5 = Biomass Energy
+ 6 = Geotyhermal Energy
+ 7 = Secure system : Archotype
+ 8 = Defense system : Nano detection
+ 9 = Defense system : Kalash
+*/
+
+const int MAIN_FREQUENCY = 100; // in milliseconds
+const int STATUSCHECK_FREQUENCY = 10000; // in milliseconds, every time we check on internet the status of the service
+const char *Wifi_SSID = "VOO-354601";
+const char *Wifi_PWD = "NJC235G6";
 
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(1, LED_PIN, NEO_GRB + NEO_KHZ800);
 
@@ -57,9 +78,20 @@ char receivedChars[numChars];   // an array to store the received data
 boolean newData = false;
 boolean baneerHasBeenShown = false;
 
+int StatusTime = 0;
+String ServiceStatus = "";
+bool FirstLoop = true;
+
+unsigned long currentMillis = 0;    // stores the value of millis() in each iteration of loop()
+unsigned long previousStatusCheck_Millis = 0; // will store last time the Console status was checked
+
+HTTPClient http; //Declare an object of class HTTPClient   
+
+
 // the setup function runs once when you press reset or power the board
 void setup() {
   neoPixelSetup();
+  wifiSetup();
   serialConnexionLoopSetup();
 }
 
@@ -72,16 +104,71 @@ void neoPixelSetup() {
   pixels.begin();
 }
 
+void wifiSetup() {
+  WiFi.begin(Wifi_SSID, Wifi_PWD);
+}
+
 
 // the loop function runs over and over again forever
 void loop() {
-  pixels.setPixelColor(0, pixels.Color(0, 0, 255)); 
-  pixels.show();                      // turn the LED on (HIGH is the voltage level)
-  delay(1000);                       // wait for a second
-  pixels.setPixelColor(0, pixels.Color(0, 0, 0)); 
-  pixels.show();                        // turn the LED off by making the voltage LOW
-  delay(1000); // wait for a second
-  serialConnexionLoop();
+  currentMillis = millis();   // capture the latest value of millis()
+
+  StatusCheck();    // Connect the first time then check status every x millis
+
+  
+  //serialConnexionLoop();
+  
+  delay(MAIN_FREQUENCY); 
+  FirstLoop = false; 
+}
+
+void StatusCheck() {
+
+  if (WiFi.status() != WL_CONNECTED) {
+    // Wait for connection
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(500); 
+    }
+  }
+  
+  pixels.setPixelColor(0, pixels.Color(0, 0, 255));
+  pixels.show(); // We're online and connected. Blue led lights
+  if ((currentMillis - previousStatusCheck_Millis >= STATUSCHECK_FREQUENCY) || FirstLoop) { // We test the first time and every STATUSCHECK_FREQUENCY
+    
+    OnlineCheck();
+    previousStatusCheck_Millis = currentMillis;
+  }
+}
+
+void OnlineCheck() {
+  Serial.println("DEBUG OnlineCheck");
+  http.begin("http://www.clones.be/console/_backend/iot/Get_service_type_status.asp?ServiceType="+SERVICE_TYPE);    //Specify request destination
+  // TODO : Set up the  SERVICE-TYPE by some physical switches on the board
+  int httpCode = http.GET();    //Send the request
+  BlinkLed(pixels.Color(0, 0, 255),100,10); //BLUE  // Delay of 900 millis to give the time to receive the data
+    
+  if (httpCode > 0) {   //Check the returning code
+    Serial.println("DEBUG httpCode :" + String(httpCode));
+    pixels.setPixelColor(0, pixels.Color(0, 0, 255));
+    pixels.show();//BLUE // We have the status  
+    ServiceStatus = http.getString();   //Get the request response ServiceStatus (just an integer)
+    Serial.println("Status : " + ServiceStatus);    //Print the response payload
+    
+    http.end();   //Close connection
+    Serial.println("Connection closed.");    
+  }
+
+}
+
+void BlinkLed (uint32_t color, int Blinkspeed, int BlinkTimes)  {
+  for (int BlinkValue = 1 ; BlinkValue <= BlinkTimes; BlinkValue += 1) {
+    pixels.setPixelColor(0, color);
+    pixels.show();
+    delay(Blinkspeed/2);
+    pixels.setPixelColor(0, pixels.Color(0, 0, 0));
+    pixels.show();
+    delay(Blinkspeed/2);
+  }
 }
 
 void serialConnexionLoop() {
