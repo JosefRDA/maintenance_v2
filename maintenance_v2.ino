@@ -40,9 +40,9 @@
 #define LED_PIN           D5
 #define BUZZ_PIN          D6
 
-const String SERVICE_TYPE = "9";
-const String SERVICE_NAME = "DEFENSE SYSTEM : KALASH";
-char SERVICE_MAINTENANCE_PASSWORD[] = "5n8cjr3m";
+const String SERVICE_TYPE = "1";
+const String SERVICE_NAME = "ELECTRICITY CIRCUIT";
+char SERVICE_MAINTENANCE_PASSWORD[] = "yqj6b6k9";
 
 /* 
  1 = ELECTRICITY CIRCUIT - yqj6b6k9
@@ -58,7 +58,7 @@ char SERVICE_MAINTENANCE_PASSWORD[] = "5n8cjr3m";
 
 const int MAIN_FREQUENCY = 100; // in milliseconds
 const int STATUSCHECK_FREQUENCY = 10000; // in milliseconds, every time we check on internet the status of the service
-const char *Wifi_SSID = "VOO-354601";
+const char *Wifi_SSID = "VOO-354601-";
 const char *Wifi_PWD = "NJC235G6";
 
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(1, LED_PIN, NEO_GRB + NEO_KHZ800);
@@ -187,7 +187,8 @@ void StatusCheck() {
   if (WiFi.status() != WL_CONNECTED) {
     // Wait for connection
     while (WiFi.status() != WL_CONNECTED) {
-      delay(500); 
+      BlinkLed(pixels.Color(0, 0, 255), SPEED_BLINK_DELAY, SPEED_BLINK_SHORT_TIMES);
+      delay(1000); 
     }
   }
   
